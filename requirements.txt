@@ -1,0 +1,3 @@
+paramiko
+dnspython
+python-gnupg

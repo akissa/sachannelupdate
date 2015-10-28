@@ -1,0 +1,13 @@
+deploy
+archives
+counters
+package
+rules
+/build
+/dist
+/*.egg
+/*.egg-info
+/**/__pycache__/
+*.pyc
+.coverage
+_build
