@@ -27,6 +27,7 @@ import datetime
 import gnupg
 
 from Queue import Queue
+from datetime import datetime
 
 from dns.exception import DNSException
 from dns import tsig, query, tsigkeyring, update
@@ -57,7 +58,7 @@ def getfiles(qfiles, dirname, names):
 
 def deploy_file(source, dest):
     """Deploy a file"""
-    date = datetime.datetime.utcnow().strftime('%Y-%m-%d')
+    date = datetime.utcnow().strftime('%Y-%m-%d')
     shandle = open(source)
     with open(dest, 'w') as handle:
         for line in shandle:
@@ -118,9 +119,9 @@ def get_counter(counterfile):
 def update_dns(config, record, sa_version):
     "Update the DNS record"
     try:
-        domain = config.get('settings', 'domain_name', 'sa.baruwa.com.')
-        dns_key = config.get('settings', 'domain_key')
-        dns_ip = config.get('settings', 'domain_ip', '127.0.0.1')
+        domain = config.get('domain_name', 'sa.baruwa.com.')
+        dns_key = config.get('domain_key')
+        dns_ip = config.get('domain_ip', '127.0.0.1')
         keyring = tsigkeyring.from_text({domain: dns_key})
         transaction = update.Update(
             domain,
