@@ -11,3 +11,7 @@ rules
 *.pyc
 .coverage
 _build
+/htmlcov
+sachannelupdate.cron
+sachannelupdate.ini
+sachannelupdate.spec
