@@ -6,7 +6,8 @@ install:
     - python setup.py install
 script: python setup.py nosetests
 before_install:
-    - pip install -r requirements_dev.txt
+    - if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install -r requirements/requirements26_dev.txt; fi
+    - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then pip install -r requirements/requirements27_dev.txt; fi
     - pip install codecov
 after_success:
   - codecov

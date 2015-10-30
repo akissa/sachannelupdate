@@ -1,0 +1,6 @@
+nose
+coverage
+paramiko
+unittest2
+dnspython
+python-gnupg

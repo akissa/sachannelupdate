@@ -20,11 +20,16 @@ sachannelupdate: Utility for pushing updates to Spamassassin update channels
 Copyright (C) 2015  Andrew Colin Kissa <andrew@topdog.za.net>
 """
 import os
+import sys
 
 from imp import load_source
 from setuptools import setup, find_packages
 
 INSTALL_REQUIRES = ['python-gnupg', 'dnspython', 'paramiko']
+TESTS_REQUIRE = ['nose', 'mock']
+
+if sys.version_info < (2, 7):
+    TESTS_REQUIRE.append('unittest2')
 
 
 def get_readme():
@@ -68,7 +73,7 @@ def main():
         scripts=['bin/updatesachannel'],
         include_package_data=True,
         zip_safe=False,
-        tests_require=['nose', 'mock'],
+        tests_require=TESTS_REQUIRE,
         install_requires=INSTALL_REQUIRES,
         classifiers=[
             'Development Status :: 4 - Beta',
