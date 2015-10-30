@@ -68,7 +68,7 @@ def main():
         scripts=['bin/updatesachannel'],
         include_package_data=True,
         zip_safe=False,
-        tests_require=['nose'],
+        tests_require=['nose', 'mock'],
         install_requires=INSTALL_REQUIRES,
         classifiers=[
             'Development Status :: 4 - Beta',
