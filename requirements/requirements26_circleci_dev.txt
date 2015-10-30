@@ -1,0 +1,8 @@
+nose
+setuptools>=17.1
+mock>=1.3.0
+coverage
+paramiko
+unittest2
+dnspython
+python-gnupg
