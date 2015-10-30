@@ -15,17 +15,17 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
-sachannelupdate: Utility functions
-"""
+"""sachannelupdate: Utility functions"""
+from __future__ import print_function
+
 import sys
 
 
 def error(msg):
     """print to stderr"""
-    print >> sys.stderr, msg
+    print(msg, file=sys.stderr)
 
 
 def info(msg):
     """print to stdout"""
-    print >> sys.stdout, msg
+    print(msg, file=sys.stdout)
