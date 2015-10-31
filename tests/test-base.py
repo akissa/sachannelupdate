@@ -150,3 +150,7 @@ class BaseTestCase(unittest2.TestCase):
         with self.assertRaises(SaChannelUpdateError):
             update_dns(config, record, sa_version)
         # self.assertEqual(result, True)
+
+
+if __name__ == "__main__":
+    unittest2.main()

@@ -25,3 +25,7 @@ class UtilsTestCase(unittest2.TestCase):
         msg = "This is a sample msg"
         info(msg)
         mock_print.assert_called_once_with(msg, file=sys.stdout)
+
+
+if __name__ == "__main__":
+    unittest2.main()

@@ -27,3 +27,7 @@ class TransportsTestCase(unittest2.TestCase):
         lfilename = os.path.join(dirname, names[0])
         mock_isfile.assert_called_once_with(lfilename)
         self.assertEqual(lfilename, keys.get())
+
+
+if __name__ == "__main__":
+    unittest2.main()
