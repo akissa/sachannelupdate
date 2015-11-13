@@ -18,7 +18,7 @@ from sachannelupdate.transports import get_key_files
 class TransportsTestCase(unittest2.TestCase):
 
     @mock.patch('sachannelupdate.transports.os.path.isfile')
-    def test_get_files(self, mock_isfile):
+    def test_get_key_files(self, mock_isfile):
         mock_isfile.return_value = True
         keys = Queue()
         dirname = '/home/andrew/.ssh'
@@ -27,6 +27,24 @@ class TransportsTestCase(unittest2.TestCase):
         lfilename = os.path.join(dirname, names[0])
         mock_isfile.assert_called_once_with(lfilename)
         self.assertEqual(lfilename, keys.get())
+
+    def test_get_ssh_keys(self):
+        pass
+
+    def test_get_remote_path(self):
+        pass
+
+    def test_get_ssh_dir(self):
+        pass
+
+    def test_get_local_user(self):
+        pass
+
+    def test_get_host_keys(self):
+        pass
+
+    def test_get_sftp_conn(self):
+        pass
 
 
 if __name__ == "__main__":

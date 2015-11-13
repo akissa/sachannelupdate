@@ -114,10 +114,10 @@ class BaseTestCase(unittest2.TestCase):
 
     @mock.patch('sachannelupdate.base.create_file')
     @mock.patch('sachannelupdate.base.open')
-    def test_get_counter_permission_error(self, mock_open, mock_create_file):
+    def test_get_counter_permission_oserror(self, mock_open, mock_create_file):
         counterfile = 'counter'
         mock_open.side_effect = OSError('permission denied')
-        with self.assertRaises(SaChannelUpdateError) as cmo:
+        with self.assertRaises(SaChannelUpdateError):
             get_counter(counterfile)
         mock_open.assert_called_once_with(counterfile)
 
@@ -150,6 +150,24 @@ class BaseTestCase(unittest2.TestCase):
         with self.assertRaises(SaChannelUpdateError):
             update_dns(config, record, sa_version)
         # self.assertEqual(result, True)
+
+    def test_sign(self):
+        pass
+
+    def test_hash_file(self):
+        pass
+
+    def test_upload(self):
+        pass
+
+    def test_cleanup(self):
+        pass
+
+    def test_check_required(self):
+        pass
+
+    def test_entry(self):
+        pass
 
 
 if __name__ == "__main__":
