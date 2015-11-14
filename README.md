@@ -8,7 +8,6 @@ It is used to [publish](https://wiki.apache.org/spamassassin/PublishingRuleUpdat
 rules to a custom Spamassassin sa-update channel.
 
 [![Build Status](https://travis-ci.org/akissa/sachannelupdate.svg)](https://travis-ci.org/akissa/sachannelupdate)
-[![CircleCI Build](https://circleci.com/gh/akissa/sachannelupdate.svg?style=shield)](https://circleci.com/gh/akissa/sachannelupdate)
 [![Code Climate](https://codeclimate.com/github/akissa/sachannelupdate/badges/gpa.svg)](https://codeclimate.com/github/akissa/sachannelupdate)
 [![codecov.io](https://codecov.io/github/akissa/sachannelupdate/coverage.svg?branch=master)](https://codecov.io/github/akissa/sachannelupdate?branch=master)
 
