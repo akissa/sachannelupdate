@@ -20,15 +20,14 @@ sachannelupdate: Utility for pushing updates to Spamassassin update channels
 Copyright (C) 2015  Andrew Colin Kissa <andrew@topdog.za.net>
 """
 import os
-import hashlib
 import tarfile
 import datetime
 
-import gnupg
-
 from Queue import Queue
+from hashlib import sha1
 from datetime import datetime
 
+from gnupg import GPG
 from dns.exception import DNSException
 from dns import tsig, query, tsigkeyring, update
 
@@ -137,11 +136,10 @@ def update_dns(config, record, sa_version):
 
 def sign(config, s_filename):
     """sign the package"""
-    gpg_home = config.get(
-        'settings', 'gpg_dir', '/var/lib/sachannelupdate/gnupg')
-    gpg_pass = config.get('settings', 'gpg_passphrase')
-    gpg_keyid = config.get('settings', 'gpg_keyid')
-    gpg = gnupg.GPG(gnupghome=gpg_home)
+    gpg_home = config.get('gpg_dir', '/var/lib/sachannelupdate/gnupg')
+    gpg_pass = config.get('gpg_passphrase')
+    gpg_keyid = config.get('gpg_keyid')
+    gpg = GPG(gnupghome=gpg_home)
     try:
         plaintext = open(s_filename, 'rb')
         signature = gpg.sign_file(
@@ -155,7 +153,7 @@ def sign(config, s_filename):
 
 def hash_file(tar_filename):
     """hash the file"""
-    hasher = hashlib.sha1()
+    hasher = sha1()
     with open(tar_filename, 'rb') as afile:
         buf = afile.read(BLOCKSIZE)
         while len(buf) > 0:

@@ -3,6 +3,7 @@ import sys
 import tarfile
 
 from Queue import Queue
+from cStringIO import StringIO
 # from datetime import datetime
 
 import mock
@@ -13,11 +14,12 @@ except ImportError:
         raise
     import unittest as unittest2
 
+from StringIO import StringIO
 from dns.exception import DNSException
 
 from sachannelupdate.exceptions import SaChannelUpdateError
 from sachannelupdate.base import getfiles, create_file, deploy_file, package, \
-    process, get_counter, update_dns
+    process, get_counter, update_dns, sign, hash_file, HASHTMPL, upload
 
 
 def stat_side_effects(*args):
@@ -151,14 +153,104 @@ class BaseTestCase(unittest2.TestCase):
             update_dns(config, record, sa_version)
         # self.assertEqual(result, True)
 
-    def test_sign(self):
-        pass
+    @mock.patch('sachannelupdate.base.open')
+    @mock.patch('sachannelupdate.base.GPG')
+    def test_sign(self, mock_gpg, mock_open):
+        gpg_pass = 'xxxxxx'
+        gpg_keyid = '01213'
+        filename = '40.tar.gz'
+        plaintext = 'testing rule'
+        gpg_home = '/var/lib/sachannelupdate/gnupg'
+        config = dict(gpg_passphrase=gpg_pass, gpg_keyid=gpg_keyid)
+        mock_open.return_value.read.return_value = plaintext
+        sign(config, filename)
+        expected_calls = [
+            mock.call(filename, 'rb'),
+            mock.call('%s.asc' % filename, 'wb')
+        ]
+        mock_gpg.assert_called_once_with(gnupghome=gpg_home)
+        mock_gpg.return_value.sign_file.assert_called_once_with(
+            mock_open.return_value,
+            keyid=gpg_keyid,
+            passphrase=gpg_pass,
+            detach=True)
+        file_handle = mock_open.return_value.__enter__.return_value
+        file_handle.write.assert_called_with(
+            str(mock_gpg.return_value.sign_file.return_value)
+        )
+        mock_open.return_value.close.assert_called_once_with()
+        self.assertEqual(expected_calls, mock_open.call_args_list)
 
-    def test_hash_file(self):
-        pass
+    @mock.patch('sachannelupdate.base.create_file')
+    @mock.patch('sachannelupdate.base.os')
+    @mock.patch('sachannelupdate.base.sha1')
+    def test_hash_file(self, mock_sha1, mock_os, mock_create_file):
+        blocksize = 65536
+        filename = '40.tar.gz'
+        data = b"""score           RCVD_IN_BW_HKW                          -8.0
+score           RCVD_IN_HOSTKARMA_W                     -5.0
+score           RCVD_IN_BARUWAWL                        -5.0
+"""
+        eof = b''
+        with mock.patch(
+            'sachannelupdate.base.open',
+            mock.mock_open(read_data=data),
+                create=True) as mock_open:
+            handle = mock_open.return_value.__enter__.return_value
+            mock_open.return_value.__iter__.return_value = [data, eof]
+            handle.read.side_effect = [data, eof]
+            handle.read.return_value = [data, eof]
+            mock_os.path.basename.return_value = filename
+            mock_sha1.return_value.hexdigest.return_value = 'xxxxxxssasa'
+            hash_file(filename)
+            mock_sha1.assert_called_once_with()
+            mock_open.assert_called_once_with(filename, 'rb')
+            handle.read.assert_called_with(blocksize)
+            self.assertTrue(len(handle.read.return_value) > 0)
+            mock_sha1.return_value.update.assert_called_with(
+                handle.read.return_value[0]
+            )
+            mock_sha1.return_value.hexdigest.assert_called_once_with()
+            mock_os.path.basename.assert_called_once_with(filename)
+            filedata = HASHTMPL % ('xxxxxxssasa', filename)
+            mock_create_file.assert_called_once_with(
+                '%s.sha1' % filename, filedata
+            )
+            self.assertTrue(mock_create_file.called)
 
-    def test_upload(self):
-        pass
+    @mock.patch('sachannelupdate.base.os')
+    @mock.patch('sachannelupdate.base.get_remote_path')
+    @mock.patch('sachannelupdate.base.get_sftp_conn')
+    def test_upload(self, mock_sftp_conn, mock_remote_path, mock_os):
+        mock_sftp = mock.Mock()
+        mock_transport = mock.Mock()
+        mock_sftp_conn.return_value = [mock_sftp, mock_transport]
+        self.assertTrue(upload(
+            mock.sentinel.config,
+            mock.sentinel.remote_loc,
+            mock.sentinel.u_filename
+        ))
+        mock_sftp_conn.assert_called_once_with(mock.sentinel.config)
+        mock_remote_path.assert_called_once_with(mock.sentinel.remote_loc)
+        mock_transport.close.assert_called_once_with()
+        self.assertEqual(mock_os.path.join.call_count, 3)
+
+    @mock.patch('sachannelupdate.base.os')
+    @mock.patch('sachannelupdate.base.get_remote_path')
+    @mock.patch('sachannelupdate.base.get_sftp_conn')
+    def test_upload_excp(self, mock_sftp_conn, mock_remote_path, mock_os):
+        mock_sftp = mock.Mock()
+        mock_transport = mock.Mock()
+        mock_sftp.put.side_effect = ValueError()
+        mock_sftp_conn.return_value = [mock_sftp, mock_transport]
+        self.assertFalse(upload(
+            mock.sentinel.config,
+            mock.sentinel.remote_loc,
+            mock.sentinel.u_filename
+        ))
+        mock_sftp_conn.assert_called_once_with(mock.sentinel.config)
+        mock_remote_path.assert_called_once_with(mock.sentinel.remote_loc)
+        mock_transport.close.assert_called_once_with()
 
     def test_cleanup(self):
         pass
