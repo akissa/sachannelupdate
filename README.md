@@ -10,6 +10,7 @@ rules to a custom Spamassassin sa-update channel.
 [![Build Status](https://travis-ci.org/akissa/sachannelupdate.svg)](https://travis-ci.org/akissa/sachannelupdate)
 [![Code Climate](https://codeclimate.com/github/akissa/sachannelupdate/badges/gpa.svg)](https://codeclimate.com/github/akissa/sachannelupdate)
 [![codecov.io](https://codecov.io/github/akissa/sachannelupdate/coverage.svg?branch=master)](https://codecov.io/github/akissa/sachannelupdate?branch=master)
+[![License](https://img.shields.io/badge/license-AGPLv3%2B-blue.svg)](https://github.com/akissa/spamc/blob/master/LICENSE)
 
 
 ## Installation
