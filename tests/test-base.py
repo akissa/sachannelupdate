@@ -289,6 +289,15 @@ score           RCVD_IN_BARUWAWL                        -5.0
         self.assertTrue(mock_queue.put.called)
         self.assertEqual(expected_calls, mock_queue.put.call_args_list)
 
+    @mock.patch('sachannelupdate.base.os.walk')
+    def test_queue_files_none(self, mock_walk):
+        mock_queue = mock.Mock(spec=Queue)
+        mock_walk.return_value = [
+            (A_PATH, (), ())
+        ]
+        queue_files(A_PATH, mock_queue)
+        mock_walk.assert_called_once_with(A_PATH)
+
     @mock.patch('sachannelupdate.base.os.path.isfile')
     @mock.patch('sachannelupdate.base.os.walk')
     def test_get_cf_files(self, mock_walk, mock_isfile):
@@ -306,6 +315,17 @@ score           RCVD_IN_BARUWAWL                        -5.0
         mock_walk.assert_called_once_with(R_PATH)
         self.assertTrue(mock_queue.put.called)
         self.assertEqual(expected_calls, mock_queue.put.call_args_list)
+
+    @mock.patch('sachannelupdate.base.os.path.isfile')
+    @mock.patch('sachannelupdate.base.os.walk')
+    def test_get_cf_files_none(self, mock_walk, mock_isfile):
+        mock_queue = mock.Mock(spec=Queue)
+        mock_walk.return_value = [
+            (R_PATH, (), ())
+        ]
+        mock_isfile.return_value = True
+        get_cf_files(R_PATH, mock_queue)
+        mock_walk.assert_called_once_with(R_PATH)
 
     @mock.patch('sachannelupdate.base.os.unlink')
     @mock.patch('sachannelupdate.base.os.walk')
