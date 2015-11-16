@@ -257,6 +257,6 @@ def entry(config, delete_files=None):
         package(dest, tardir, version)
         sign(config, path)
         hash_file(path)
-        if upload(config, remote_loc, path) == 0:
+        if upload(config, remote_loc, path):
             if update_dns(config, str(version), dns_ver):
                 create_file(counterfile, "%d" % version)
