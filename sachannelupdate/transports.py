@@ -45,7 +45,14 @@ def get_key_files(kfiles, dirname, names):
 def get_ssh_keys(sshdir):
     """Get SSH keys"""
     keys = Queue()
-    os.path.walk(sshdir, get_key_files, keys)
+    for root, _, files in os.walk(os.path.abspath(sshdir)):
+        if not files:
+            continue
+        for filename in files:
+            fullname = os.path.join(root, filename)
+            if (os.path.isfile(fullname) and fullname.endswith('_rsa') or
+                    fullname.endswith('_dsa')):
+                keys.put(fullname)
     return keys
 
 
@@ -81,7 +88,6 @@ def get_local_user(username):
 def get_host_keys(hostname, sshdir):
     """get host key"""
     hostkey = None
-    # hostkeytype = None
 
     try:
         host_keys = load_host_keys(os.path.join(sshdir, 'known_hosts'))
