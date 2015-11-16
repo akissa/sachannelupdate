@@ -14,12 +14,22 @@ except ImportError:
         raise
     import unittest as unittest2
 
+from Queue import Queue
 from StringIO import StringIO
 from dns.exception import DNSException
 
-from sachannelupdate.exceptions import SaChannelUpdateError
+from sachannelupdate.exceptions import SaChannelUpdateError, \
+    SaChannelUpdateConfigError as CfgError
 from sachannelupdate.base import getfiles, create_file, deploy_file, package, \
-    process, get_counter, update_dns, sign, hash_file, HASHTMPL, upload
+    process, get_counter, update_dns, sign, hash_file, HASHTMPL, upload, \
+    queue_files, cleanup, check_required, get_cf_files, entry
+
+
+R_FILES = ('70_baruwa.cf', '70_baruwa_dmarc.cf')
+A_FILES = ('10.tar.gz', '10.tar.gz.asc', '10.tar.gz.sha1')
+R_PATH = '/var/lib/sarulesupdate/deploy'
+A_PATH = '/var/lib/sarulesupdate/archives'
+CF_FILES = ('70_baruwa.cf', '70_baruwa.post', '70_baruwa.cf.orig')
 
 
 def stat_side_effects(*args):
@@ -27,6 +37,19 @@ def stat_side_effects(*args):
         return mock.Mock(st_mtime=1)
     if args[0] == '/var/lib/saupdate/rule.cf':
         return mock.Mock(st_mtime=2)
+
+
+def queue_files_side_effects(*args):
+    if args[0] == A_PATH:
+        return [
+            (args[0], (), A_FILES)
+        ]
+    elif args[0] == R_PATH:
+        return [
+            (args[0], (), R_FILES)
+        ]
+    else:
+        raise ValueError(args[0])
 
 
 class BaseTestCase(unittest2.TestCase):
@@ -252,14 +275,84 @@ score           RCVD_IN_BARUWAWL                        -5.0
         mock_remote_path.assert_called_once_with(mock.sentinel.remote_loc)
         mock_transport.close.assert_called_once_with()
 
-    def test_cleanup(self):
-        pass
+    @mock.patch('sachannelupdate.base.os.walk')
+    def test_queue_files(self, mock_walk):
+        mock_queue = mock.Mock(spec=Queue)
+        mock_walk.return_value = [
+            (A_PATH, (), A_FILES)
+        ]
+        expected_calls = [
+            mock.call('%s/%s' % (A_PATH, filename)) for filename in A_FILES
+        ]
+        queue_files(A_PATH, mock_queue)
+        mock_walk.assert_called_once_with(A_PATH)
+        self.assertTrue(mock_queue.put.called)
+        self.assertEqual(expected_calls, mock_queue.put.call_args_list)
+
+    @mock.patch('sachannelupdate.base.os.path.isfile')
+    @mock.patch('sachannelupdate.base.os.walk')
+    def test_get_cf_files(self, mock_walk, mock_isfile):
+        mock_queue = mock.Mock(spec=Queue)
+        mock_walk.return_value = [
+            (R_PATH, (), CF_FILES)
+        ]
+        mock_isfile.return_value = True
+        expected_calls = [
+            mock.call('%s/%s' % (R_PATH, filename))
+            for filename in CF_FILES
+            if (filename.endswith('.cf') or filename.endswith('.post'))
+        ]
+        get_cf_files(R_PATH, mock_queue)
+        mock_walk.assert_called_once_with(R_PATH)
+        self.assertTrue(mock_queue.put.called)
+        self.assertEqual(expected_calls, mock_queue.put.call_args_list)
+
+    @mock.patch('sachannelupdate.base.os.unlink')
+    @mock.patch('sachannelupdate.base.os.walk')
+    @mock.patch('sachannelupdate.base.os.path.exists')
+    def test_cleanup(self, mock_os_path_exists, mock_os_walk, mock_os_unlink):
+        mock_os_path_exists.return_value = True
+        mock_os_walk.side_effect = queue_files_side_effects
+        counterfile = '/var/lib/sarulesupdate/db/counters'
+        cleanup(R_PATH, A_PATH, counterfile)
+        self.assertEqual(mock_os_unlink.call_count, 6)
 
     def test_check_required(self):
-        pass
+        config = {}
+        with self.assertRaises(CfgError) as cma:
+            check_required(config)
+            self.assertEqual(
+                cma.exception.message,
+                'The domain_key option is required'
+            )
+        with self.assertRaises(CfgError) as cma:
+            config['domain_key'] = mock.sentinel.domain_key
+            check_required(config)
+            self.assertEqual(
+                cma.exception.message,
+                'The remote_location option is required'
+            )
+        with self.assertRaises(CfgError) as cma:
+            config['remote_loc'] = mock.sentinel.remote_loc
+            check_required(config)
+            self.assertEqual(
+                cma.exception.message,
+                'The gpg_keyid option is required'
+            )
 
-    def test_entry(self):
-        pass
+    # @mock.patch('sachannelupdate.base.os.path.isfile')
+    # @mock.patch('sachannelupdate.base.os.walk')
+    # def test_entry(self):
+    #     config = dict(
+    #         domain_key=mock.sentinel.domain_key,
+    #         remote_loc=mock.sentinel.remote_loc,
+    #         gpg_keyid=mock.sentinel.gpg_keyid,
+    #     )
+    #     mock_walk.return_value = [
+    #         (R_PATH, (), CF_FILES)
+    #     ]
+    #     mock_isfile.return_value = True
+    #     entry(config)
 
 
 if __name__ == "__main__":
