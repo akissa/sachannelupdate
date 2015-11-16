@@ -3,7 +3,6 @@ import sys
 import tarfile
 
 from Queue import Queue
-from cStringIO import StringIO
 # from datetime import datetime
 
 import mock
@@ -14,8 +13,6 @@ except ImportError:
         raise
     import unittest as unittest2
 
-from Queue import Queue
-from StringIO import StringIO
 from dns.exception import DNSException
 
 from sachannelupdate.exceptions import SaChannelUpdateError, \
