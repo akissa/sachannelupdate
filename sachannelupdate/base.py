@@ -31,6 +31,7 @@ from gnupg import GPG
 from dns.exception import DNSException
 from dns import tsig, query, tsigkeyring, update
 
+from sachannelupdate.utils import info
 from sachannelupdate.exceptions import SaChannelUpdateConfigError \
     as CfgError, SaChannelUpdateDNSError, SaChannelUpdateError
 from sachannelupdate.transports import get_sftp_conn, get_remote_path
@@ -183,20 +184,40 @@ def upload(config, remote_loc, u_filename):
     return rcode
 
 
+def queue_files(dirpath, queue):
+    """Add files in a directory to a queue"""
+    for root, _, files in os.walk(os.path.abspath(dirpath)):
+        if not files:
+            continue
+        for filename in files:
+            queue.put(os.path.join(root, filename))
+
+
+def get_cf_files(path, queue):
+    """Get rule files in a directory and put them in a queue"""
+    for root, _, files in os.walk(os.path.abspath(path)):
+        if not files:
+            continue
+        for filename in files:
+            fullname = os.path.join(root, filename)
+            if os.path.isfile(fullname) and fullname.endswith('.cf') or \
+                    fullname.endswith('.post'):
+                queue.put(fullname)
+
+
 def cleanup(dest, tardir, counterfile):
     """Remove existing rules"""
     thefiles = Queue()
-    os.path.walk(dest, getfiles, thefiles)
-    for t_file in os.listdir(tardir):
-        full_path = os.path.join(tardir, t_file)
-        if os.path.isfile(full_path):
-            thefiles.put(full_path)
+    # dest directory files
+    queue_files(dest, thefiles)
+    # tar directory files
+    queue_files(tardir, thefiles)
     while not thefiles.empty():
         d_file = thefiles.get()
-        print "Deleting file: %s" % d_file
+        info("Deleting file: %s" % d_file)
         os.unlink(d_file)
     if os.path.exists(counterfile):
-        print "Deleting the counter file %s" % counterfile
+        info("Deleting the counter file %s" % counterfile)
         os.unlink(counterfile)
 
 
@@ -215,7 +236,7 @@ def entry(config, delete_files=None):
     home_dir = config.get('home_dir', '/var/lib/sachannelupdate')
     dns_ver = config.get('spamassassin_version', '1.4.3')
     remote_loc = config.get('remote_location')
-    home_dir = os.path.join(home_dir, 'rules')
+    rule_dir = os.path.join(home_dir, 'rules')
     dest = os.path.join(home_dir, 'deploy')
     tardir = os.path.join(home_dir, 'archives')
     counterfile = os.path.join(home_dir, 'db', 'counters')
@@ -227,7 +248,7 @@ def entry(config, delete_files=None):
         return
 
     cffiles = Queue()
-    os.path.walk(home_dir, getfiles, cffiles)
+    get_cf_files(rule_dir, cffiles)
 
     if process(dest, cffiles):
         version = get_counter(counterfile)
