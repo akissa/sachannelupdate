@@ -10,7 +10,8 @@ except ImportError:
     import unittest as unittest2
 
 from sachannelupdate.cli import main
-from sachannelupdate.exceptions import SaChannelUpdateConfigError
+from sachannelupdate.exceptions import SaChannelUpdateConfigError, \
+    SaChannelUpdateError
 
 
 class CLITestCase(unittest2.TestCase):
@@ -32,16 +33,18 @@ class CLITestCase(unittest2.TestCase):
         main()
         self.assertTrue(mock_entry.called)
 
-    # @mock.patch('sachannelupdate.cli.entry')
-    # def test_main_bad_cf(self, mock_entry):
-    #     config = os.path.join(
-    #         os.path.dirname(__file__),
-    #         'bad-sachannelupdate.ini'
-    #     )
-    #     sys.argv = ['__main__', '-c', config]
-    #     # with self.assertRaises(BaseException) as cma:
-    #     main()
-    #     # self.assertTrue(mock_entry.called)
+    @mock.patch('sachannelupdate.cli.error')
+    @mock.patch('sachannelupdate.cli.entry')
+    def test_main_cf_exp(self, mock_entry, mock_error):
+        config = os.path.join(
+            os.path.dirname(__file__),
+            'sa.ini'
+        )
+        mock_entry.side_effect = SaChannelUpdateError("xxx")
+        sys.argv = ['__main__', '-c', config]
+        main()
+        self.assertTrue(mock_entry.called)
+        self.assertTrue(mock_error.called)
 
 
 if __name__ == "__main__":
