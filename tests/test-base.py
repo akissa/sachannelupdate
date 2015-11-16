@@ -76,6 +76,22 @@ class BaseTestCase(unittest2.TestCase):
     def test_deploy_file(self, mock_open):
         source = '/tmp/rule1.cf'
         dest = '/srv/www/saupdate/rule1.cf'
+        # mock_shandle = mock.Mock(spec=file)
+        # mock_handle = mock.Mock(spec=file)
+        # mock_shandle.__iter__.return_value = [
+        #     '# Updated: %date%\n',
+        #     ''
+        # ]
+        #
+        # def mock_side_e(*args):
+        #     "inline"
+        #     if args[0] == source:
+        #         return mock_shandle
+        #     elif args[0] == dest:
+        #         return mock_handle
+        #     else:
+        #         raise ValueError(args[0])
+        # mock_open.side_effect = mock_side_e
         deploy_file(source, dest)
         expected_calls = [mock.call(source), mock.call(dest, 'w')]
         self.assertEqual(expected_calls, mock_open.call_args_list)
@@ -360,19 +376,60 @@ score           RCVD_IN_BARUWAWL                        -5.0
                 'The gpg_keyid option is required'
             )
 
-    # @mock.patch('sachannelupdate.base.os.path.isfile')
-    # @mock.patch('sachannelupdate.base.os.walk')
-    # def test_entry(self):
-    #     config = dict(
-    #         domain_key=mock.sentinel.domain_key,
-    #         remote_loc=mock.sentinel.remote_loc,
-    #         gpg_keyid=mock.sentinel.gpg_keyid,
-    #     )
-    #     mock_walk.return_value = [
-    #         (R_PATH, (), CF_FILES)
-    #     ]
-    #     mock_isfile.return_value = True
-    #     entry(config)
+    @mock.patch('sachannelupdate.base.create_file')
+    @mock.patch('sachannelupdate.base.update_dns')
+    @mock.patch('sachannelupdate.base.upload')
+    @mock.patch('sachannelupdate.base.hash_file')
+    @mock.patch('sachannelupdate.base.sign')
+    @mock.patch('sachannelupdate.base.package')
+    @mock.patch('sachannelupdate.base.get_counter')
+    @mock.patch('sachannelupdate.base.process')
+    @mock.patch('sachannelupdate.base.os.path.isfile')
+    @mock.patch('sachannelupdate.base.os.walk')
+    def test_entry(
+        self,
+        mock_walk,
+        mock_isfile,
+        mock_process,
+        mock_get_counter,
+        mock_package,
+        mock_sign,
+        mock_hash_file,
+        mock_upload,
+        mock_update_dns,
+            mock_create_file):
+        config = dict(
+            domain_key=mock.sentinel.domain_key,
+            remote_loc=mock.sentinel.remote_loc,
+            gpg_keyid=mock.sentinel.gpg_keyid,
+        )
+        mock_walk.return_value = [
+            (R_PATH, (), CF_FILES)
+        ]
+        mock_isfile.return_value = True
+        mock_process.return_value = True
+        mock_get_counter.return_value = 1
+        entry(config)
+        self.assertTrue(mock_walk.called)
+        self.assertTrue(mock_isfile.called)
+        self.assertTrue(mock_process.called)
+        self.assertTrue(mock_get_counter.called)
+        self.assertTrue(mock_package.called)
+        self.assertTrue(mock_sign.called)
+        self.assertTrue(mock_hash_file.called)
+        self.assertTrue(mock_upload.called)
+        self.assertTrue(mock_update_dns.called)
+        self.assertTrue(mock_create_file.called)
+
+    @mock.patch('sachannelupdate.base.cleanup')
+    def test_entry_cleanup(self, mock_cleanup):
+        config = dict(
+            domain_key=mock.sentinel.domain_key,
+            remote_loc=mock.sentinel.remote_loc,
+            gpg_keyid=mock.sentinel.gpg_keyid,
+        )
+        entry(config, True)
+        self.assertTrue(mock_cleanup.called)
 
 
 if __name__ == "__main__":
