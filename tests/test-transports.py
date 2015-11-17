@@ -12,7 +12,9 @@ except ImportError:
         raise
     import unittest as unittest2
 
+from paramiko import SSHException
 
+from sachannelupdate.exceptions import SaChannelUpdateTransportError
 from sachannelupdate.transports import get_key_files, get_ssh_keys, \
     get_remote_path, get_ssh_dir, get_local_user, get_host_keys, \
     get_sftp_conn
@@ -61,7 +63,7 @@ class TransportsTestCase(unittest2.TestCase):
 
     def test_get_remote_path(self):
         for path in [
-            'sftp://127.0.0.1/srv/www/saupdate',
+                'sftp://127.0.0.1/srv/www/saupdate',
                 'sftp://192.168.1.25:22/srv/www/saupdate']:
             result = get_remote_path(path)
             self.assertEqual(result, '/srv/www/saupdate')
@@ -104,8 +106,167 @@ class TransportsTestCase(unittest2.TestCase):
         key = get_host_keys('secure.example.com', sshdir)
         self.assertTrue(key is None)
 
-    def test_get_sftp_conn(self):
-        pass
+    @mock.patch('sachannelupdate.transports.SFTPClient')
+    @mock.patch('sachannelupdate.transports.PKey')
+    @mock.patch('sachannelupdate.transports.Transport')
+    @mock.patch('sachannelupdate.transports.get_ssh_keys')
+    @mock.patch('sachannelupdate.transports.get_host_keys')
+    @mock.patch('sachannelupdate.transports.get_ssh_dir')
+    @mock.patch('sachannelupdate.transports.get_local_user')
+    def test_get_sftp_conn(
+        self,
+        mock_get_local_user,
+        mock_get_ssh_dir,
+        mock_get_host_keys,
+        mock_get_ssh_keys,
+        mock_Transport,
+        mock_PKey,
+            mock_SFTPClient):
+        config = {
+            'remote_location': 'sftp://127.0.0.1/srv/www/saupdate',
+            'remote_username': mock.sentinel.remote_username
+        }
+        queue = mock.Mock(spec=Queue)
+        queue.get.return_value = mock.Mock()
+        # queue.empty.side_effect = [False, False]
+        queue.empty.return_value = False
+        mock_get_ssh_keys.return_value = queue
+        mock_get_local_user.return_value = mock.sentinel.remote_username
+        mock_SFTPClient.from_transport.return_value = mock.Mock()
+        mock_Transport.return_value.connect.return_value = True
+        get_sftp_conn(config)
+        mock_get_local_user.assert_called_once_with(
+            mock.sentinel.remote_username
+        )
+        mock_get_ssh_dir.assert_called_once_with(
+            config,
+            mock_get_local_user.return_value,
+        )
+        mock_get_host_keys.assert_called_once_with(
+            '127.0.0.1',
+            mock_get_ssh_dir.return_value,
+        )
+        mock_get_ssh_keys.assert_called_once_with(
+            mock_get_ssh_dir.return_value,
+        )
+        mock_Transport.assert_called_once_with(
+            (
+                '127.0.0.1',
+                22,
+            )
+        )
+        mock_PKey.from_private_key_file.assert_called_with(
+            mock_get_ssh_keys.return_value.get(),
+        )
+        mock_Transport.return_value.connect.assert_called_once_with(
+            hostkey=mock_get_host_keys.return_value,
+            username=mock_get_local_user.return_value,
+            password=None,
+            pkey=mock_PKey.from_private_key_file.return_value,
+        )
+        mock_SFTPClient.from_transport.assert_called_with(
+            mock_Transport.return_value,
+        )
+
+    @mock.patch('sachannelupdate.transports.SFTPClient')
+    @mock.patch('sachannelupdate.transports.get_ssh_keys')
+    @mock.patch('sachannelupdate.transports.get_host_keys')
+    @mock.patch('sachannelupdate.transports.get_ssh_dir')
+    @mock.patch('sachannelupdate.transports.get_local_user')
+    def test_get_sftp_conn_fail(
+        self,
+        mock_get_local_user,
+        mock_get_ssh_dir,
+        mock_get_host_keys,
+        mock_get_ssh_keys,
+            mock_SFTPClient):
+        config = {
+            'remote_location': 'sftp://127.0.0.1:22/srv/www/saupdate',
+            'remote_username': mock.sentinel.remote_username
+        }
+        queue = mock.Mock(spec=Queue)
+        queue.get.return_value = mock.Mock()
+        # queue.empty.side_effect = [False, False]
+        queue.empty.return_value = True
+        mock_get_ssh_keys.return_value = queue
+        mock_get_local_user.return_value = mock.sentinel.remote_username
+        mock_SFTPClient.from_transport.return_value = mock.Mock()
+        with self.assertRaises(SaChannelUpdateTransportError):
+            get_sftp_conn(config)
+        mock_get_local_user.assert_called_once_with(
+            mock.sentinel.remote_username
+        )
+        mock_get_ssh_dir.assert_called_once_with(
+            config,
+            mock_get_local_user.return_value,
+        )
+        mock_get_host_keys.assert_called_once_with(
+            '127.0.0.1',
+            mock_get_ssh_dir.return_value,
+        )
+
+    @mock.patch('sachannelupdate.transports.SFTPClient')
+    @mock.patch('sachannelupdate.transports.PKey')
+    @mock.patch('sachannelupdate.transports.Transport')
+    @mock.patch('sachannelupdate.transports.get_ssh_keys')
+    @mock.patch('sachannelupdate.transports.get_host_keys')
+    @mock.patch('sachannelupdate.transports.get_ssh_dir')
+    @mock.patch('sachannelupdate.transports.get_local_user')
+    def test_get_sftp_conn_exp(
+        self,
+        mock_get_local_user,
+        mock_get_ssh_dir,
+        mock_get_host_keys,
+        mock_get_ssh_keys,
+        mock_Transport,
+        mock_PKey,
+            mock_SFTPClient):
+        config = {
+            'remote_location': 'sftp://127.0.0.1/srv/www/saupdate',
+            'remote_username': mock.sentinel.remote_username
+        }
+        queue = mock.Mock(spec=Queue)
+        queue.get.return_value = mock.Mock()
+        queue.empty.side_effect = [False, False, True]
+        queue.empty.return_value = False
+        mock_get_ssh_keys.return_value = queue
+        mock_get_local_user.return_value = mock.sentinel.remote_username
+        mock_SFTPClient.from_transport.side_effect = SSHException
+        mock_Transport.return_value.connect.return_value = True
+        with self.assertRaises(SaChannelUpdateTransportError):
+            get_sftp_conn(config)
+        mock_get_local_user.assert_called_once_with(
+            mock.sentinel.remote_username
+        )
+        mock_get_ssh_dir.assert_called_once_with(
+            config,
+            mock_get_local_user.return_value,
+        )
+        mock_get_host_keys.assert_called_once_with(
+            '127.0.0.1',
+            mock_get_ssh_dir.return_value,
+        )
+        mock_get_ssh_keys.assert_called_once_with(
+            mock_get_ssh_dir.return_value,
+        )
+        mock_Transport.assert_called_once_with(
+            (
+                '127.0.0.1',
+                22,
+            )
+        )
+        mock_PKey.from_private_key_file.assert_called_with(
+            mock_get_ssh_keys.return_value.get(),
+        )
+        mock_Transport.return_value.connect.assert_called_with(
+            hostkey=mock_get_host_keys.return_value,
+            username=mock_get_local_user.return_value,
+            password=None,
+            pkey=mock_PKey.from_private_key_file.return_value,
+        )
+        mock_SFTPClient.from_transport.assert_called_with(
+            mock_Transport.return_value,
+        )
 
 
 if __name__ == "__main__":
